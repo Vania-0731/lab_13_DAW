@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Formulario Estudiante - Gestión Académica</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" th:href="@{/}"><i class="bi bi-mortarboard-fill me-2"></i>Gestión Académica</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/}">Inicio</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/estudiantes}">Estudiantes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/cursos}">Cursos</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Page Header -->
+<div class="container-fluid bg-primary text-white py-4">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="mb-0" id="titulo"><i class="bi bi-person-plus me-2"></i>Nuevo Estudiante</h1>
+            </div>
+            <div class="col-auto">
+                <a th:href="@{/estudiantes}" class="btn btn-light">
+                    <i class="bi bi-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0">Información del Estudiante</h5>
+                </div>
+                <div class="card-body">
+                    <form id="formEstudiante">
+                        <input type="hidden" id="id" />
+
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="nombre" class="form-label">
+                                    <i class="bi bi-person me-2"></i>Nombre Completo
+                                </label>
+                                <input type="text" class="form-control" id="nombre" required
+                                       placeholder="Ingrese el nombre completo">
+                                <div class="invalid-feedback">
+                                    Por favor ingrese el nombre del estudiante.
+                                </div>
+                            </div>
+
+                            <div class="col-md-6 mb-3">
+                                <label for="email" class="form-label">
+                                    <i class="bi bi-envelope me-2"></i>Correo Electrónico
+                                </label>
+                                <input type="email" class="form-control" id="email" required
+                                       placeholder="ejemplo@correo.com">
+                                <div class="invalid-feedback">
+                                    Por favor ingrese un correo electrónico válido.
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-book me-2"></i>Cursos Disponibles
+                            </label>
+                            <div class="border rounded p-3 bg-light" style="max-height: 300px; overflow-y: auto;">
+                                <div id="cursosCheckboxes">
+                                    <div class="text-center py-3">
+                                        <div class="spinner-border spinner-border-sm text-primary" role="status">
+                                            <span class="visually-hidden">Cargando cursos...</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <small class="form-text text-muted">Seleccione los cursos en los que se inscribirá el estudiante.</small>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2">
+                            <a th:href="@{/estudiantes}" class="btn btn-secondary">
+                                <i class="bi bi-x-circle me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-check-circle me-2"></i>Guardar Estudiante
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Modal -->
+<div class="modal fade" id="successModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-check-circle me-2"></i>Éxito
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="successMessage">Estudiante guardado correctamente.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-success" data-bs-dismiss="modal">Continuar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    const params = new URLSearchParams(location.search);
+    const id = params.get("id");
+    let successModal;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        successModal = new bootstrap.Modal(document.getElementById('successModal'));
+        loadCursos();
+    });
+
+    function loadCursos() {
+        fetch("/api/cursos")
+            .then(res => res.json())
+            .then(cursos => {
+                const cont = document.getElementById("cursosCheckboxes");
+                cont.innerHTML = '';
+
+                if (cursos.length === 0) {
+                    cont.innerHTML = '<p class="text-muted text-center">No hay cursos disponibles</p>';
+                } else {
+                    cursos.forEach(c => {
+                        cont.innerHTML += `
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" value="${c.id}" name="cursos" id="curso_${c.id}">
+                                    <label class="form-check-label" for="curso_${c.id}">
+                                        ${c.nombre}
+                                        ${c.descripcion ? `<small class="text-muted d-block">${c.descripcion}</small>` : ''}
+                                    </label>
+                                </div>
+                            `;
+                    });
+                }
+
+                // Si hay ID, carga datos del estudiante
+                if (id) {
+                    loadStudentData(id);
+                }
+            })
+            .catch(error => {
+                console.error('Error loading courses:', error);
+                document.getElementById("cursosCheckboxes").innerHTML =
+                    '<p class="text-danger text-center">Error al cargar los cursos</p>';
+            });
+    }
+
+    function loadStudentData(studentId) {
+        document.getElementById("titulo").innerHTML = '<i class="bi bi-pencil me-2"></i>Editar Estudiante';
+
+        fetch(`/api/estudiantes/${studentId}`)
+            .then(res => res.json())
+            .then(est => {
+                document.getElementById("id").value = est.id;
+                document.getElementById("nombre").value = est.nombre;
+                document.getElementById("email").value = est.email;
+
+                // Marcar cursos asignados
+                if (est.cursos) {
+                    est.cursos.forEach(ec => {
+                        const checkbox = document.querySelector(`input[name="cursos"][value="${ec.id}"]`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                        }
+                    });
+                }
+            })
+            .catch(error => {
+                console.error('Error loading student data:', error);
+                alert('Error al cargar los datos del estudiante');
+            });
+    }
+
+    document.getElementById("formEstudiante").addEventListener("submit", function(e) {
+        e.preventDefault();
+
+        // Validación del formulario
+        if (!this.checkValidity()) {
+            e.stopPropagation();
+            this.classList.add('was-validated');
+            return;
+        }
+
+        const estudiante = {
+            nombre: document.getElementById("nombre").value.trim(),
+            email: document.getElementById("email").value.trim(),
+            cursos: Array.from(document.querySelectorAll('input[name="cursos"]:checked'))
+                .map(cb => ({ id: parseInt(cb.value) }))
+        };
+
+        const method = id ? "PUT" : "POST";
+        const url = id ? `/api/estudiantes/${id}` : "/api/estudiantes";
+        const submitButton = document.querySelector('button[type="submit"]');
+
+        // Deshabilitar botón durante el envío
+        submitButton.disabled = true;
+        submitButton.innerHTML = '<i class="bi bi-hourglass-split me-2"></i>Guardando...';
+
+        fetch(url, {
+            method: method,
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(estudiante)
+        })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('successMessage').textContent =
+                        id ? 'Estudiante actualizado correctamente.' : 'Estudiante creado correctamente.';
+                    successModal.show();
+
+                    // Redirigir después de cerrar el modal
+                    document.getElementById('successModal').addEventListener('hidden.bs.modal', function() {
+                        window.location.href = getContextPath() + '/estudiantes';
+                    });
+                } else {
+                    throw new Error('Error en la respuesta del servidor');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Error al guardar el estudiante. Por favor, inténtelo de nuevo.');
+            })
+            .finally(() => {
+                // Rehabilitar botón
+                submitButton.disabled = false;
+                submitButton.innerHTML = '<i class="bi bi-check-circle me-2"></i>Guardar Estudiante';
+            });
+    });
+
+    function getContextPath() {
+        return window.location.pathname.substring(0, window.location.pathname.indexOf("/", 2));
+    }
+</script>
+</body>
+</html>

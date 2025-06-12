@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Cursos - Gestión Académica</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" th:href="@{/}"><i class="bi bi-mortarboard-fill me-2"></i>Gestión Académica</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/}">Inicio</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/estudiantes}">Estudiantes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" th:href="@{/cursos}">Cursos</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Page Header -->
+<div class="container-fluid bg-primary text-white py-4">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="mb-0"><i class="bi bi-book-fill me-2"></i>Lista de Cursos</h1>
+            </div>
+            <div class="col-auto">
+                <a th:href="@{/curso_form}" class="btn btn-light">
+                    <i class="bi bi-plus-circle me-2"></i>Agregar Curso
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="container py-4">
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+
+    <!-- Courses Table -->
+    <div class="card shadow-sm" id="coursesCard" style="display: none;">
+        <div class="card-header bg-white">
+            <h5 class="mb-0">Cursos Registrados</h5>
+        </div>
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover mb-0" id="tablaCursos">
+                    <thead class="table-primary">
+                    <tr>
+                        <th><i class="bi bi-book me-2"></i>Nombre</th>
+                        <th><i class="bi bi-file-text me-2"></i>Descripción</th>
+                        <th><i class="bi bi-people me-2"></i>Estudiantes</th>
+                        <th><i class="bi bi-gear me-2"></i>Acciones</th>
+                    </tr>
+                    </thead>
+                    <tbody id="bodyCursos"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty State -->
+    <div id="emptyState" class="text-center py-5" style="display: none;">
+        <i class="bi bi-book-x text-muted" style="font-size: 4rem;"></i>
+        <h3 class="text-muted mt-3">No hay cursos registrados</h3>
+        <p class="text-muted">Comienza agregando tu primer curso</p>
+        <a th:href="@{/curso_form}" class="btn btn-primary">
+            <i class="bi bi-plus-circle me-2"></i>Agregar Curso
+        </a>
+    </div>
+</div>
+
+<!-- Course Details Modal -->
+<div class="modal fade" id="detailsModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">
+                    <i class="bi bi-book me-2"></i>Detalles del Curso
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="courseDetailsContent">
+                    <!-- Content will be loaded here -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Confirmar Eliminación</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>¿Estás seguro de que deseas eliminar este curso?</p>
+                <p class="text-muted">Esta acción no se puede deshacer y eliminará todas las asignaciones de estudiantes.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Eliminar</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let deleteModal;
+    let detailsModal;
+    let courseIdToDelete;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        deleteModal = new bootstrap.Modal(document.getElementById('deleteModal'));
+        detailsModal = new bootstrap.Modal(document.getElementById('detailsModal'));
+        loadCourses();
+    });
+
+    function loadCourses() {
+        fetch("/api/cursos")
+            .then(res => res.json())
+            .then(data => {
+                document.getElementById('loadingSpinner').style.display = 'none';
+
+                if (data.length === 0) {
+                    document.getElementById('emptyState').style.display = 'block';
+                    return;
+                }
+
+                document.getElementById('coursesCard').style.display = 'block';
+                const body = document.getElementById("bodyCursos");
+                body.innerHTML = '';
+
+                data.forEach(c => {
+                    const estudiantesText = c.estudiantes && c.estudiantes.length > 0
+                        ? `<span class="badge bg-primary rounded-pill">${c.estudiantes.length}</span> <small class="text-muted ms-1">estudiantes</small>`
+                        : '<span class="badge bg-light text-muted rounded-pill">0</span> <small class="text-muted ms-1">estudiantes</small>';
+
+                    const descripcionText = c.descripcion || 'Sin descripción';
+
+                    const row = `<tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <div class="bg-primary rounded-circle d-flex align-items-center justify-content-center text-white me-3" style="width: 40px; height: 40px;">
+                                        <i class="bi bi-book"></i>
+                                    </div>
+                                    <div>
+                                        <div class="fw-bold">${escapeHtml(c.nombre)}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="text-muted">${escapeHtml(descripcionText)}</div>
+                            </td>
+                            <td>${estudiantesText}</td>
+                            <td>
+                                <div class="btn-group" role="group">
+                                    <a href="${getContextPath()}/curso_form?id=${c.id}" class="btn btn-outline-primary btn-sm">
+                                        <i class="bi bi-pencil"></i> Editar
+                                    </a>
+                                    <button class="btn btn-outline-info btn-sm" onclick="showCourseDetails(${c.id})">
+                                        <i class="bi bi-eye"></i> Ver
+                                    </button>
+                                    <button class="btn btn-outline-danger btn-sm" onclick="confirmarEliminacion(${c.id})">
+                                        <i class="bi bi-trash"></i> Eliminar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>`;
+                    body.innerHTML += row;
+                });
+            })
+            .catch(error => {
+                console.error('Error loading courses:', error);
+                document.getElementById('loadingSpinner').style.display = 'none';
+                document.getElementById('emptyState').style.display = 'block';
+            });
+    }
+
+    function getContextPath() {
+        return window.location.pathname.substring(0, window.location.pathname.indexOf("/", 2));
+    }
+
+    function confirmarEliminacion(id) {
+        courseIdToDelete = id;
+        deleteModal.show();
+    }
+
+    function showCourseDetails(courseId) {
+        fetch(`/api/cursos/${courseId}`)
+            .then(res => res.json())
+            .then(curso => {
+                if (!curso) {
+                    console.error('Curso no encontrado');
+                    return;
+                }
+
+                let estudiantesHtml = '';
+                if (curso.estudiantes && curso.estudiantes.length > 0) {
+                    estudiantesHtml = `
+                        <div class="row">
+                            ${curso.estudiantes.map(est => `
+                                <div class="col-md-6 mb-2">
+                                    <div class="d-flex align-items-center">
+                                        <i class="bi bi-person-circle me-2 text-primary"></i>
+                                        <div>
+                                            <div class="fw-medium">${escapeHtml(est.nombre)}</div>
+                                            <small class="text-muted">${escapeHtml(est.email || 'Sin email')}</small>
+                                        </div>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    `;
+                } else {
+                    estudiantesHtml = '<p class="text-muted">No hay estudiantes asignados a este curso.</p>';
+                }
+
+                const content = `
+                    <div class="row">
+                        <div class="col-12 mb-3">
+                            <h6><i class="bi bi-type me-2"></i>Nombre del Curso</h6>
+                            <p class="ms-4">${escapeHtml(curso.nombre)}</p>
+                        </div>
+                        <div class="col-12 mb-3">
+                            <h6><i class="bi bi-file-text me-2"></i>Descripción</h6>
+                            <p class="ms-4">${escapeHtml(curso.descripcion || 'Sin descripción')}</p>
+                        </div>
+                        <div class="col-12">
+                            <h6><i class="bi bi-people me-2"></i>Estudiantes Asignados (${curso.estudiantes ? curso.estudiantes.length : 0})</h6>
+                            <div class="ms-4">
+                                ${estudiantesHtml}
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                document.getElementById('courseDetailsContent').innerHTML = content;
+                detailsModal.show();
+            })
+            .catch(error => {
+                console.error('Error loading course details:', error);
+            });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    document.getElementById('confirmDelete').addEventListener('click', function() {
+        if (courseIdToDelete) {
+            fetch(`/api/cursos/${courseIdToDelete}`, { method: "DELETE" })
+                .then(response => {
+                    if (response.ok) {
+                        deleteModal.hide();
+                        loadCourses();
+                    } else {
+                        alert('Error al eliminar el curso');
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error al eliminar el curso');
+                });
+        }
+    });
+</script>
+</body>
+</html>

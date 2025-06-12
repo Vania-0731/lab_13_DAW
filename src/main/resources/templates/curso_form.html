@@ -1,0 +1,448 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Formulario Curso - Gestión Académica</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" rel="stylesheet">
+</head>
+<body class="bg-light">
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-primary">
+    <div class="container">
+        <a class="navbar-brand" th:href="@{/}"><i class="bi bi-mortarboard-fill me-2"></i>Gestión Académica</a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/}">Inicio</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{/estudiantes}">Estudiantes</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link active" th:href="@{/cursos}">Cursos</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>
+
+<!-- Page Header -->
+<div class="container-fluid bg-primary text-white py-4">
+    <div class="container">
+        <div class="row align-items-center">
+            <div class="col">
+                <h1 class="mb-0" id="pageTitle">
+                    <i class="bi bi-plus-circle me-2" id="titleIcon"></i>
+                    <span id="titleText">Agregar Curso</span>
+                </h1>
+                <p class="mb-0 mt-2 opacity-75" id="pageSubtitle">
+                    Complete los campos para crear un nuevo curso
+                </p>
+            </div>
+            <div class="col-auto">
+                <a th:href="@{/cursos}" class="btn btn-light">
+                    <i class="bi bi-arrow-left me-2"></i>Volver
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Main Content -->
+<div class="container my-5">
+    <!-- Loading Spinner -->
+    <div id="loadingSpinner" class="text-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Cargando...</span>
+        </div>
+    </div>
+
+    <!-- Form Container -->
+    <div class="row justify-content-center" id="formContainer" style="display: none;">
+        <div class="col-lg-8">
+            <div class="card shadow">
+                <div class="card-header bg-white">
+                    <h5 class="mb-0" id="cardTitle">
+                        <i class="bi bi-book me-2"></i>
+                        <span>Información del Curso</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <form id="cursoForm" novalidate class="needs-validation">
+                        <input type="hidden" id="cursoId" value="">
+
+                        <!-- Nombre del Curso -->
+                        <div class="mb-4">
+                            <label for="nombre" class="form-label">
+                                <i class="bi bi-type me-1"></i>Nombre del Curso <span class="text-danger">*</span>
+                            </label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="nombre"
+                                   placeholder="Ingrese el nombre del curso"
+                                   required>
+                            <div class="invalid-feedback">
+                                Por favor ingrese el nombre del curso.
+                            </div>
+                        </div>
+
+                        <!-- Descripción -->
+                        <div class="mb-4">
+                            <label for="descripcion" class="form-label">
+                                <i class="bi bi-file-text me-1"></i>Descripción <span class="text-danger">*</span>
+                            </label>
+                            <textarea class="form-control"
+                                      id="descripcion"
+                                      rows="3"
+                                      placeholder="Descripción detallada del curso"
+                                      required></textarea>
+                            <div class="invalid-feedback">
+                                Por favor ingrese la descripción del curso.
+                            </div>
+                            <div class="form-text">
+                                <i class="bi bi-info-circle me-1"></i>Describa los objetivos y contenido del curso
+                            </div>
+                        </div>
+
+                        <!-- Estudiantes -->
+                        <div class="mb-4">
+                            <label class="form-label">
+                                <i class="bi bi-people me-1"></i>Estudiantes Asignados
+                            </label>
+
+                            <!-- No students message -->
+                            <div id="noEstudiantesAlert" class="alert alert-info" style="display: none;">
+                                <i class="bi bi-info-circle me-2"></i>
+                                No hay estudiantes registrados.
+                                <a th:href="@{/estudiante_form}" class="alert-link">Agregar estudiante</a>
+                            </div>
+
+                            <!-- Students selection -->
+                            <div id="estudiantesSection" style="display: none;">
+                                <!-- Search box -->
+                                <div class="mb-3">
+                                    <div class="input-group">
+                                        <span class="input-group-text">
+                                            <i class="bi bi-search"></i>
+                                        </span>
+                                        <input type="text"
+                                               class="form-control"
+                                               id="searchEstudiantes"
+                                               placeholder="Buscar estudiante...">
+                                    </div>
+                                </div>
+
+                                <!-- Select all/none buttons -->
+                                <div class="mb-3">
+                                    <button type="button" class="btn btn-sm btn-outline-primary me-2" id="selectAll">
+                                        <i class="bi bi-check-all me-1"></i>Seleccionar todos
+                                    </button>
+                                    <button type="button" class="btn btn-sm btn-outline-secondary" id="selectNone">
+                                        <i class="bi bi-x-circle me-1"></i>Deseleccionar todos
+                                    </button>
+                                    <small class="text-muted ms-3">
+                                        <span id="selectedCount">0</span> estudiantes seleccionados
+                                    </small>
+                                </div>
+
+                                <!-- Estudiantes list -->
+                                <div class="border rounded p-3 bg-light" style="max-height: 300px; overflow-y: auto;" id="estudiantesList">
+                                    <!-- Students will be loaded here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Form Actions -->
+                        <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                            <a th:href="@{/cursos}" class="btn btn-secondary me-md-2">
+                                <i class="bi bi-x-circle me-2"></i>Cancelar
+                            </a>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <i class="bi bi-check-circle me-2"></i>
+                                <span id="submitText">Guardar Curso</span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Success Toast -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+    <div id="successToastEl" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+        <div class="toast-header">
+            <i class="bi bi-check-circle-fill text-success me-2"></i>
+            <strong class="me-auto">Éxito</strong>
+            <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+        </div>
+        <div class="toast-body" id="toastMessage">
+            Curso guardado correctamente
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    let isEditMode = false;
+    let cursoId = null;
+    let allStudents = [];
+    let successToast;
+
+    document.addEventListener('DOMContentLoaded', function() {
+        successToast = new bootstrap.Toast(document.getElementById('successToastEl'));
+
+        // Get curso ID from URL parameters
+        const urlParams = new URLSearchParams(window.location.search);
+        cursoId = urlParams.get('id');
+        isEditMode = cursoId !== null;
+
+        setupUI();
+        loadData();
+        setupEventListeners();
+    });
+
+    function setupUI() {
+        if (isEditMode) {
+            document.getElementById('titleIcon').className = 'bi bi-pencil me-2';
+            document.getElementById('titleText').textContent = 'Editar Curso';
+            document.getElementById('pageSubtitle').textContent = 'Modifique los campos necesarios';
+            document.getElementById('cardTitle').innerHTML = '<i class="bi bi-pencil me-2"></i><span>Editar Información del Curso</span>';
+            document.getElementById('submitText').textContent = 'Actualizar Curso';
+        }
+    }
+
+    async function loadData() {
+        try {
+            // Load students
+            await loadStudents();
+
+            // If edit mode, load course data
+            if (isEditMode) {
+                await loadCourse();
+            }
+        } catch (error) {
+            console.error('Error loading data:', error);
+        } finally {
+            document.getElementById('loadingSpinner').style.display = 'none';
+            document.getElementById('formContainer').style.display = 'block';
+        }
+    }
+
+    async function loadStudents() {
+        try {
+            const response = await fetch('/api/estudiantes');
+            const students = await response.json();
+            allStudents = students;
+
+            if (students.length === 0) {
+                document.getElementById('noEstudiantesAlert').style.display = 'block';
+            } else {
+                document.getElementById('estudiantesSection').style.display = 'block';
+                renderStudents(students);
+            }
+        } catch (error) {
+            console.error('Error loading students:', error);
+        }
+    }
+
+    async function loadCourse() {
+        try {
+            const response = await fetch(`/api/cursos/${cursoId}`);
+            const curso = await response.json();
+
+            if (curso) {
+                document.getElementById('cursoId').value = curso.id;
+                document.getElementById('nombre').value = curso.nombre || '';
+                document.getElementById('descripcion').value = curso.descripcion || '';
+
+                // Select assigned students
+                if (curso.estudiantes) {
+                    curso.estudiantes.forEach(estudiante => {
+                        const checkbox = document.getElementById(`est_${estudiante.id}`);
+                        if (checkbox) {
+                            checkbox.checked = true;
+                        }
+                    });
+                }
+                updateSelectedCount();
+            }
+        } catch (error) {
+            console.error('Error loading course:', error);
+        }
+    }
+
+    function renderStudents(students) {
+        const container = document.getElementById('estudiantesList');
+        container.innerHTML = '';
+
+        students.forEach(estudiante => {
+            const div = document.createElement('div');
+            div.className = 'form-check mb-2 estudiante-item';
+            div.innerHTML = `
+                <input class="form-check-input" type="checkbox" value="${estudiante.id}" id="est_${estudiante.id}" onchange="updateSelectedCount()">
+                <label class="form-check-label" for="est_${estudiante.id}">
+                    <div class="d-flex align-items-center">
+                        <i class="bi bi-person-circle me-2 text-primary"></i>
+                        <div>
+                            <div class="fw-medium">${escapeHtml(estudiante.nombre)}</div>
+                            <small class="text-muted">${escapeHtml(estudiante.email || 'Sin email')}</small>
+                        </div>
+                    </div>
+                </label>
+            `;
+            container.appendChild(div);
+        });
+    }
+
+    function setupEventListeners() {
+        // Form validation and submission
+        const form = document.getElementById('cursoForm');
+        form.addEventListener('submit', handleFormSubmit);
+
+        // Search functionality
+        const searchInput = document.getElementById('searchEstudiantes');
+        if (searchInput) {
+            searchInput.addEventListener('input', filterEstudiantes);
+        }
+
+        // Select all/none buttons
+        const selectAllBtn = document.getElementById('selectAll');
+        const selectNoneBtn = document.getElementById('selectNone');
+
+        if (selectAllBtn) {
+            selectAllBtn.addEventListener('click', selectAllEstudiantes);
+        }
+
+        if (selectNoneBtn) {
+            selectNoneBtn.addEventListener('click', selectNoneEstudiantes);
+        }
+    }
+
+    async function handleFormSubmit(event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const form = event.target;
+        if (!form.checkValidity()) {
+            form.classList.add('was-validated');
+            return;
+        }
+
+        const submitBtn = document.getElementById('submitBtn');
+        const originalText = submitBtn.innerHTML;
+        submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Guardando...';
+        submitBtn.disabled = true;
+
+        try {
+            const formData = getFormData();
+
+            let response;
+            if (isEditMode) {
+                response = await fetch(`/api/cursos/${cursoId}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+            } else {
+                response = await fetch('/api/cursos', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(formData)
+                });
+            }
+
+            if (response.ok) {
+                showSuccessToast(isEditMode ? 'Curso actualizado correctamente' : 'Curso creado correctamente');
+                setTimeout(() => {
+                    window.location.href = '/cursos';
+                }, 1500);
+            } else {
+                throw new Error('Error en el servidor');
+            }
+        } catch (error) {
+            console.error('Error saving course:', error);
+            alert('Error al guardar el curso. Por favor intente nuevamente.');
+        } finally {
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    }
+
+    function getFormData() {
+        const selectedStudentIds = Array.from(document.querySelectorAll('input[type="checkbox"]:checked'))
+            .map(cb => parseInt(cb.value));
+
+        const selectedStudents = allStudents.filter(student =>
+            selectedStudentIds.includes(student.id)
+        );
+
+        return {
+            nombre: document.getElementById('nombre').value.trim(),
+            descripcion: document.getElementById('descripcion').value.trim(),
+            estudiantes: selectedStudents
+        };
+    }
+
+    function filterEstudiantes() {
+        const searchTerm = document.getElementById('searchEstudiantes').value.toLowerCase();
+        const items = document.querySelectorAll('.estudiante-item');
+
+        items.forEach(item => {
+            const label = item.querySelector('label').textContent.toLowerCase();
+            if (label.includes(searchTerm)) {
+                item.style.display = 'block';
+            } else {
+                item.style.display = 'none';
+            }
+        });
+    }
+
+    function selectAllEstudiantes() {
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            if (cb.closest('.estudiante-item').style.display !== 'none') {
+                cb.checked = true;
+            }
+        });
+        updateSelectedCount();
+    }
+
+    function selectNoneEstudiantes() {
+        const checkboxes = document.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => cb.checked = false);
+        updateSelectedCount();
+    }
+
+    function updateSelectedCount() {
+        const selectedCount = document.querySelectorAll('input[type="checkbox"]:checked').length;
+        const countElement = document.getElementById('selectedCount');
+        if (countElement) {
+            countElement.textContent = selectedCount;
+        }
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    function showSuccessToast(message) {
+        document.getElementById('toastMessage').textContent = message;
+        successToast.show();
+    }
+</script>
+</body>
+</html>
